@@ -1,45 +1,52 @@
 <?php
-// On utilise SRC_DIR pour cibler le modèle correctement
 require_once SRC_DIR . '/models/FtpModel.php';
 
 function ftpPage() {
     $conn = getFtpConnection();
+    if (!$conn) { die("Echec connexion FTP."); }
 
-    if (!$conn) {
-        $error = "Impossible de se connecter au serveur FTP.";
-        // On peut créer une vue d'erreur générique ou juste faire un echo pour l'instant
-        echo $error;
-        return;
-    }
+    // Gestion du dossier courant
+    $currentDir = $_GET['dir'] ?? '.';
+    if ($currentDir == '') $currentDir = '.';
 
+    // Actions
     if (isset($_GET['sub'])) {
+        $file = $_GET['file'] ?? '';
+
         switch ($_GET['sub']) {
             case 'upload':
                 if (isset($_FILES['file_upload'])) {
-                    $local = $_FILES['file_upload']['tmp_name'];
-                    $remote = $_FILES['file_upload']['name'];
-                    uploadFile($conn, $local, $remote);
+                    $remotePath = $currentDir . '/' . $_FILES['file_upload']['name'];
+                    uploadFile($conn, $_FILES['file_upload']['tmp_name'], $remotePath);
                 }
                 break;
-
+            case 'download':
+                // On télécharge dans un fichier temporaire puis on l'envoie au navigateur
+                $tempFile = tempnam(sys_get_temp_dir(), 'ftp');
+                if (downloadFile($conn, $file, $tempFile)) {
+                    header('Content-Type: application/octet-stream');
+                    header('Content-Disposition: attachment; filename="'.basename($file).'"');
+                    readfile($tempFile);
+                    unlink($tempFile);
+                    exit;
+                }
+                break;
             case 'delete':
-                if (isset($_GET['file'])) {
-                    ftp_delete($conn, $_GET['file']);
-                }
+                deleteFile($conn, $file);
                 break;
-
+            case 'mkdir':
+                if (!empty($_POST['dirname'])) makeDir($conn, $currentDir . '/' . $_POST['dirname']);
+                break;
+            case 'rmdir':
+                removeDir($conn, $file);
+                break;
             case 'chmod':
-                // Note : Assurez-vous que l'utilisateur a les droits de faire cela
-                if (isset($_GET['file']) && isset($_POST['mode'])) {
-                    ftp_chmod($conn, octdec($_POST['mode']), $_GET['file']);
-                }
+                if (isset($_POST['mode'])) changeMode($conn, octdec($_POST['mode']), $file);
                 break;
         }
     }
 
-    $files = listFiles($conn);
-    ftp_close($conn);
-
-    // Correction du chemin pour la vue
+    $files = getFileList($conn, $currentDir);
     require SRC_DIR . '/views/ftp_view.php';
+    ftp_close($conn);
 }
