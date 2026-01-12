@@ -1,5 +1,6 @@
 <?php
-require_once 'models/SystemModel.php';
+// Correction du chemin pour le modèle
+require_once SRC_DIR . '/models/SystemModel.php';
 
 function shellPage() {
     $result = null;
@@ -8,5 +9,6 @@ function shellPage() {
         $result = executeSystemCommand($_POST['command']);
     }
 
-    require 'views/shell_view.php';
+    // Correction du chemin pour la vue
+    require SRC_DIR . '/views/shell_view.php';
 }

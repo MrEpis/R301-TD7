@@ -1,17 +1,17 @@
 <?php
-require_once 'models/FtpModel.php';
+// On utilise SRC_DIR pour cibler le modèle correctement
+require_once SRC_DIR . '/models/FtpModel.php';
 
 function ftpPage() {
-    // Tentative de connexion au serveur via le modèle
     $conn = getFtpConnection();
 
     if (!$conn) {
         $error = "Impossible de se connecter au serveur FTP.";
-        require 'views/error.php';
+        // On peut créer une vue d'erreur générique ou juste faire un echo pour l'instant
+        echo $error;
         return;
     }
 
-    // Gestion des actions spécifiques envoyées en paramètre URL
     if (isset($_GET['sub'])) {
         switch ($_GET['sub']) {
             case 'upload':
@@ -29,20 +29,17 @@ function ftpPage() {
                 break;
 
             case 'chmod':
+                // Note : Assurez-vous que l'utilisateur a les droits de faire cela
                 if (isset($_GET['file']) && isset($_POST['mode'])) {
-                    // Conversion de la chaîne octale en entier
                     ftp_chmod($conn, octdec($_POST['mode']), $_GET['file']);
                 }
                 break;
         }
     }
 
-    // Récupération de la liste finale des fichiers pour la vue
     $files = listFiles($conn);
-
-    // Fermeture propre de la connexion
     ftp_close($conn);
 
-    // Chargement de la page HTML
-    require 'views/ftp_view.php';
+    // Correction du chemin pour la vue
+    require SRC_DIR . '/views/ftp_view.php';
 }
